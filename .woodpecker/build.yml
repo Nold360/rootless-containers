@@ -24,35 +24,21 @@ when:
     include:
       - .woodpecker/*
       - containers/${IMAGE}/**
-  branch: main
+        #branch: main
   event: [ cron, manual, push, tag ]
-
 
 pipeline:
   build:
-    image: plugins/kaniko:1.6
-    settings:
-      repo: lib42/${IMAGE}
-      dockerfile: containers/${IMAGE}/Containerfile
-      build_args: 
-        - "VERSION=${VERSION}"
-      expand_tag: false
-      custom_labels:
-        - org.opencontainers.image.url=${CI_REPO_LINK}
-        - org.opencontainers.image.revision=${CI_COMMIT_SHA}
-        - org.opencontainers.image.vendor=lib42
-        - org.opencontainers.image.created=${CI_PIPELINE_CREATED}
-      context: containers/${IMAGE}
-      tags: 
-        - ${TAG}
-        - ${VERSION}
-      username:
-        from_secret: docker_username
-      password:
-        from_secret: docker_password
-
-  scan:
-    image: "aquasec/trivy:latest"
+    image: reg.dc/buildah
     commands:
-      - >
-        trivy image -s HIGH,CRITICAL --ignore-unfixed --no-progress lib42/${IMAGE}:${VERSION}
+      - buildah bud --pull -t "lib42/${IMAGE}:${VERSION}" -t "lib42/${IMAGE}:latest" --build-arg "VERSION=${VERSION}" -f containers/${IMAGE}/Containerfile containers/${IMAGE}
+        #      - buildah push  --creds "$${DOCKER_USERNAME}:$${DOCKER_PASSWORD}" "lib42/${IMAGE}:${VERSION}"
+      # custom_labels:
+      #   - org.opencontainers.image.url=${CI_REPO_LINK}
+      #   - org.opencontainers.image.revision=${CI_COMMIT_SHA}
+      #   - org.opencontainers.image.vendor=lib42
+      #   - org.opencontainers.image.created=${CI_PIPELINE_CREATED}
+      # context: containers/${IMAGE}
+    secrets:
+      - docker_username
+      - docker_password
